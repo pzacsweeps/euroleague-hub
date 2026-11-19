@@ -124,6 +124,7 @@
     $('#mAway').onchange = () => setMatchup($('#mHome').value, $('#mAway').value);
     $('#gpSpread').oninput = renderGameProps;
     $('#gpTotal').oninput = renderGameProps;
+    $('#gpTotal').onchange = () => { const v = parseFloat($('#gpTotal').value); if (!isNaN(v)) $('#gpTotal').value = toHalf(v); renderGameProps(); };
     $('#gpLast').onchange = renderGameProps;
     $('#gpProj').onclick = () => { setProjection(); renderGameProps(); };
     const first = D.games.filter(g => g.round === nr && !g.played).sort((a, b) => (a.utc || '').localeCompare(b.utc || ''))[0]
@@ -198,6 +199,7 @@
 
   // ---------- GAME PROP CHECK ----------
   const half = x => Math.round(x * 2) / 2;
+  const toHalf = x => Math.floor(x) + 0.5;   // totals always end in .5, so no pushes
   const sgn = x => (x > 0 ? '+' : '') + x;
   function teamGames(t) {
     return D.games.filter(g => g.played && (g.home === t || g.away === t))
@@ -212,15 +214,16 @@
     if (!h?.gp || !a?.gp) { $('#gpProjTxt').textContent = ''; return; }
     // simple projection: average of each side's scoring and the other side's points allowed, +2 home edge
     const hp = (h.ppg + a.oppg) / 2 + 1, ap = (a.ppg + h.oppg) / 2 - 1;
-    const spread = half(-(hp - ap)), total = half(hp + ap);
+    const spread = half(-(hp - ap));
     $('#gpSpread').value = spread === 0 ? -0.5 : spread;
-    $('#gpTotal').value = total;
+    $('#gpTotal').value = toHalf(hp + ap);
     $('#gpProjTxt').textContent = `Hub projection: ${short(state.mHome)} ${hp.toFixed(1)} · ${short(state.mAway)} ${ap.toFixed(1)} (season scoring vs points allowed, 2 pt home edge). Overwrite with your bookie's lines.`;
   }
   function renderGameProps() {
     const h = state.mHome, a = state.mAway;
     $('#gpHomeLab').textContent = short(h);
-    const sp = parseFloat($('#gpSpread').value), tot = parseFloat($('#gpTotal').value), last = +$('#gpLast').value;
+    const sp = parseFloat($('#gpSpread').value), totRaw = parseFloat($('#gpTotal').value), last = +$('#gpLast').value;
+    const tot = isNaN(totRaw) ? NaN : toHalf(totRaw);
     const block = (t, line, venueHome) => {
       let gs = teamGames(t);
       if (last) gs = gs.slice(-last);
