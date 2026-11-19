@@ -280,18 +280,15 @@
       ST.map(s => `<button class="chip" data-s="${s}"><span class="st-pill st-${s}">${s}</span> ${counts(s)}</button>`).join('');
     $('#iStatus').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; iState.status = b.dataset.s;
       $('#iStatus').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); renderInjuries(); };
-    $('#iTeam').onchange = () => { if ($('#iTeam').value) $('#iScope').value = 'all'; renderInjuries(); };
-    $('#iScope').onchange = renderInjuries;
+    $('#iTeam').onchange = renderInjuries;
     renderInjuries();
   }
   function nextGameOf(t) {
     return D.games.filter(g => !g.played && (g.home === t || g.away === t)).sort((a, b) => (a.utc || '').localeCompare(b.utc || ''))[0];
   }
   function renderInjuries() {
-    const team = $('#iTeam').value, scope = $('#iScope').value, nr = nextRound();
-    let codes = Object.keys(T);
-    if (team) codes = [team];
-    else if (scope === 'round') codes = codes.filter(c => D.games.some(g => g.round === nr && !g.played && (g.home === c || g.away === c)));
+    const team = $('#iTeam').value;
+    const codes = team ? [team] : Object.keys(T);
     const cards = codes.map(c => ({ c, g: nextGameOf(c), list: (INJ.teams[c] || []).filter(e => !iState.status || e.status === iState.status) }))
       .sort((a, b) => ((a.g?.utc || 'z').localeCompare(b.g?.utc || 'z')) || short(a.c).localeCompare(short(b.c)));
     const html = cards.map(({ c, g, list }) => {

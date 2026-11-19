@@ -11,9 +11,9 @@ Schedule, team matchups, defence vs position and every player's game log for the
 ## Data
 `scripts/update_data.py` pulls the official EuroLeague API (schedule + per-game box scores, which include each player's position) and writes `data/hub.json`. Box scores already stored in `data/raw.json` aren't downloaded again.
 
-The GitHub Action in `.github/workflows/update-data.yml` runs it every Saturday at 06:00 UTC, once the round is done. To refresh by hand: Actions tab → **Update EuroLeague data** → **Run workflow**.
+The GitHub Action in `.github/workflows/update-data.yml` checks every morning at 06:17 UTC and updates the stats when a round has been completed (the morning after its last game). To refresh by hand: Actions tab → **Update EuroLeague data** → **Run workflow**.
 
 To switch season, change `EL_SEASON` (default `E2026`) in the script.
 
 ## Injuries
-`scripts/update_injuries.py` reads the [BasketNews injury report](https://basketnews.com/news-212393-euroleague-injury-report-updated-daily.html) and writes `data/injuries.json`. Run it by hand: Actions tab → **Update injuries** → **Run workflow** (works from the GitHub mobile app too). Injured players are also flagged on the Matchup tab.
+`scripts/update_injuries.py` reads the [BasketNews injury report](https://basketnews.com/news-212393-euroleague-injury-report-updated-daily.html) and writes `data/injuries.json`. It runs automatically on game days, once in the morning (from 07:30 UTC) and once about 30 minutes before the first tip-off; game times come live from the EuroLeague schedule (`scripts/auto.py`). To run it by hand: Actions tab → **Update injuries** → **Run workflow** (works from the GitHub mobile app too). Injured players are also flagged on the Matchup tab.
