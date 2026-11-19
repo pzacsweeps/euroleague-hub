@@ -15,6 +15,7 @@ Usage:
     python scripts/update_data.py --build    # build only from existing raw.json
 """
 import json
+import re
 import os
 import sys
 import time
@@ -52,12 +53,34 @@ def get(path, tries=4):
             time.sleep(2 * (i + 1))
 
 
+ROMAN = {"II", "III", "IV", "V"}
+
+
+def clean_name(n):
+    """Tidy a player name whether it arrives ALL CAPS or already capitalised."""
+    out = []
+    for w in n.split():
+        bare = w.rstrip(".")
+        if bare.upper() == "JR":
+            out.append("Jr."); continue
+        if bare.upper() in ROMAN and out:
+            out.append(bare.upper()); continue
+        if len(bare) <= 3 and not any(c in "aeiouyAEIOUY" for c in bare):
+            out.append(bare.upper()); continue  # initials: TJ, DJ, PJ
+        w = w.lower()
+        w = "-".join(x[:1].upper() + x[1:] for x in w.split("-"))
+        w = "'".join(x[:1].upper() + x[1:] for x in w.split("'"))
+        w = re.sub(r"(^|-)Mc([a-z])", lambda m: m.group(1) + "Mc" + m.group(2).upper(), w)
+        out.append(w)
+    return " ".join(out)
+
+
 def name_fmt(raw):
     # "DE COLO, NANDO" -> "Nando De Colo"
     if "," in raw:
         last, first = raw.split(",", 1)
         raw = f"{first.strip()} {last.strip()}"
-    return " ".join(w.capitalize() if w.isupper() else w for w in raw.split())
+    return clean_name(raw)
 
 
 def compact_side(side):
@@ -141,6 +164,10 @@ def build(raw):
     box = raw["box"]
     P = {f: i for i, f in enumerate(P_FIELDS)}
     T = {f: i for i, f in enumerate(T_FIELDS)}
+    for b in box.values():
+        for side in b.values():
+            for row in side["players"]:
+                row[P["name"]] = clean_name(row[P["name"]])
 
     team_games = defaultdict(list)       # team -> list of (own total, opp total, won, gameCode)
     allowed = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))  # team -> pos -> stat sums
