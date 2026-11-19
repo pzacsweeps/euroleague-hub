@@ -6,6 +6,7 @@
   const STATS4 = [['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fg3m', '3PM']];
 
   let D, T, L, F;   // data, teams, log rows (objects), log field index
+  let INJ = null, INJP = {};   // injury report, injury entry by player id
   const state = { round: null, team: '', mHome: '', mAway: '', sort: { k: 'round', dir: -1 } };
 
   // ---------- helpers ----------
@@ -186,14 +187,17 @@
   function playersVs(team, opp) {
     const ps = D.players.filter(p => p.team === team && p.gp > 0).sort((x, y) => y.min - x.min);
     const dv = D.dvp[opp];
-    const body = ps.map(p => `<tr>
-      <td class="t"><span class="nm"><span class="pos ${p.pos}">${p.pos}</span><span><span class="pn" data-id="${esc(p.id)}">${esc(p.name)}</span><span class="sub2">${p.gp} GP · ${n1(p.min)} min</span></span></span></td>` +
+    const injList = (INJ?.teams?.[team] || []).filter(e => e.status !== 'Ready');
+    const strip = injList.length ? `<div class="mi">${injList.map(e => `<span><span class="st-pill st-${esc(e.status)}">${esc(e.status)}</span> <b>${esc(e.name)}</b>${e.reason ? ' · ' + esc(e.reason) : ''}</span>`).join('')}</div>` : '';
+    const body = ps.map(p => { const ij = INJP[p.id]; const pill = ij && ij.status !== 'Ready' ? ` <span class="st-pill st-${esc(ij.status)}" title="${esc(ij.reason || '')}">${esc(ij.status)}</span>` : '';
+      return `<tr class="${ij && ij.status === 'Out' ? 'inj-out' : ''}">
+      <td class="t"><span class="nm"><span class="pos ${p.pos}">${p.pos}</span><span><span class="pn" data-id="${esc(p.id)}">${esc(p.name)}</span>${pill}<span class="sub2">${p.gp} GP · ${n1(p.min)} min</span></span></span></td>` +
       STATS4.map(([k]) => {
         const r = dv?.[p.pos]?.rank?.[k];
         return `<td><div class="st"><b>${n1(p[k])}</b><span class="${rankCls(r)}" title="${esc(short(opp))} allows ${n1(dv?.[p.pos]?.[k])} ${k.toUpperCase()} per game to ${POS[p.pos]}s">#${r ?? '–'}</span></div></td>`;
-      }).join('') + '</tr>').join('');
+      }).join('') + '</tr>'; }).join('');
     return `<h2 class="h2">${crest(team)}${esc(short(team))} players <small>vs ${esc(short(opp))} defence by position · tap a name for his game log</small></h2>
-      <div class="tablewrap" style="border:0;background:none"><table class="pm"><thead><tr><th class="t">Player</th>${STATS4.map(s => `<th>${s[1]}</th>`).join('')}</tr></thead>
+      ${strip}<div class="tablewrap" style="border:0;background:none"><table class="pm"><thead><tr><th class="t">Player</th>${STATS4.map(s => `<th>${s[1]}</th>`).join('')}</tr></thead>
       <tbody>${body || `<tr><td colspan="5" class="empty">No games played yet.</td></tr>`}</tbody></table></div>`;
   }
 
@@ -258,6 +262,52 @@
       </div>`;
     };
     $('#gpOut').innerHTML = block(h, sp, true) + block(a, isNaN(sp) ? NaN : -sp, false);
+  }
+
+  // ---------- INJURIES ----------
+  const ST = ['Out', 'Doubtful', 'Uncertain', 'Game-time', 'Ready'];
+  const iState = { status: '' };
+  function initInjuries() {
+    if (!INJ) { $('#injList').innerHTML = '<div class="empty">No injury report loaded yet.</div>'; return; }
+    const pub = INJ.published || INJ.fetched;
+    $('#injStamp').textContent = `Updated ${new Date(pub).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` +
+      (INJ.fetched ? ` · pulled ${new Date(INJ.fetched).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : '');
+    if (INJ.source) $('#injCredit').href = INJ.source;
+    const codes = Object.keys(T).sort((a, b) => short(a).localeCompare(short(b)));
+    $('#iTeam').innerHTML = '<option value="">All</option>' + codes.map(c => `<option value="${c}">${esc(short(c))}</option>`).join('');
+    const counts = s => Object.values(INJ.teams).flat().filter(e => !s || e.status === s).length;
+    $('#iStatus').innerHTML = `<button class="chip all on" data-s="">All ${counts('')}</button>` +
+      ST.map(s => `<button class="chip" data-s="${s}"><span class="st-pill st-${s}">${s}</span> ${counts(s)}</button>`).join('');
+    $('#iStatus').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; iState.status = b.dataset.s;
+      $('#iStatus').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === b)); renderInjuries(); };
+    $('#iTeam').onchange = () => { if ($('#iTeam').value) $('#iScope').value = 'all'; renderInjuries(); };
+    $('#iScope').onchange = renderInjuries;
+    renderInjuries();
+  }
+  function nextGameOf(t) {
+    return D.games.filter(g => !g.played && (g.home === t || g.away === t)).sort((a, b) => (a.utc || '').localeCompare(b.utc || ''))[0];
+  }
+  function renderInjuries() {
+    const team = $('#iTeam').value, scope = $('#iScope').value, nr = nextRound();
+    let codes = Object.keys(T);
+    if (team) codes = [team];
+    else if (scope === 'round') codes = codes.filter(c => D.games.some(g => g.round === nr && !g.played && (g.home === c || g.away === c)));
+    const cards = codes.map(c => ({ c, g: nextGameOf(c), list: (INJ.teams[c] || []).filter(e => !iState.status || e.status === iState.status) }))
+      .sort((a, b) => ((a.g?.utc || 'z').localeCompare(b.g?.utc || 'z')) || short(a.c).localeCompare(short(b.c)));
+    const html = cards.map(({ c, g, list }) => {
+      if (iState.status && !list.length) return '';
+      const nx = g ? `<span class="nx">R${g.round} ${g.home === c ? 'vs' : '@'} <b>${esc(short(g.home === c ? g.away : g.home))}</b><br>${new Date(g.utc).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} ${fmtTime(new Date(g.utc))}</span>` : '';
+      const rows = list.map(e => `<div class="injr">
+          <span class="pos ${e.pos.includes('C') ? 'C' : /F/.test(e.pos) ? 'F' : 'G'}">${esc(e.pos)}</span>
+          <span class="who">${e.pid ? `<span class="pn" data-id="${esc(e.pid)}">${esc(e.name)}</span>` : `<span class="nm0">${esc(e.name)}</span>`}
+            <span class="st-pill st-${esc(e.status)}">${esc(e.status)}</span>
+            <span class="meta">${e.reason ? `<em>${esc(e.reason)}</em>` : 'No reason given'}${e.pid ? ` · ${n1(e.pts)} pts, ${n1(e.min)} min in ${e.gp} GP` : ' · no EuroLeague minutes'}</span></span>
+          <span class="rt"><b>${esc(e.round)}</b>${e.back ? 'Back: ' + esc(e.back) : ''}</span>
+        </div>`).join('');
+      return `<div class="injt"><div class="injt-h">${crest(c, '')}${esc(short(c))}${nx}</div>${rows || '<p class="hint" style="padding:8px 0 2px">No players listed.</p>'}</div>`;
+    }).join('');
+    $('#injList').innerHTML = html || '<div class="empty">No players match these filters.</div>';
+    $('#injList').querySelectorAll('.pn').forEach(n => n.onclick = () => openLogFor(n.dataset.id));
   }
 
   // ---------- GAME LOG ----------
@@ -357,9 +407,13 @@
     const yr = (D.season || '').replace(/^E/, '');
     $('#seasonLine').textContent = `${yr}-${String((+yr + 1) % 100).padStart(2, '0')} season · through Round ${D.lastRound}`;
     $('#updated').textContent = D.updated ? 'Updated ' + new Date(D.updated).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
-    initSchedule(); initMatchup(); initLog();
+    return fetch('data/injuries.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null).then(inj => {
+      INJ = inj;
+      if (INJ) Object.values(INJ.teams).flat().forEach(e => { if (e.pid) INJP[e.pid] = e; });
+      initSchedule(); initMatchup(); initLog(); initInjuries();
     const h = location.hash.replace('#', '');
-    if (['schedule', 'matchup', 'log'].includes(h)) showTab(h);
+    if (['schedule', 'matchup', 'log', 'injuries'].includes(h)) showTab(h);
+    });
   }).catch(err => {
     $('#schedList').innerHTML = `<div class="empty">Couldn't load the data (${esc(err.message)}).</div>`;
   });

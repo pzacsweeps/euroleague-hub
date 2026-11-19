@@ -230,3 +230,38 @@ h1 em{font-style:normal;color:var(--org)}
   .gp-in .fld input,.gp-in .fld select{width:100%}
 }
 @media (max-width:600px){.gpl .mg{display:none}.gpl .tag{display:none}}
+
+/* injuries */
+.inj-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.credit{color:var(--mut);font-size:12px;text-decoration:none;border:1px solid var(--line2);border-radius:999px;padding:6px 12px}
+.credit b{color:var(--org2)}
+.credit:hover{border-color:var(--org);color:var(--txt)}
+.stat-chips{padding:0;margin:0 0 2px;flex-wrap:wrap}
+.inj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px}
+@media (max-width:600px){.inj-grid{grid-template-columns:1fr}}
+.injt{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.injt-h{display:flex;align-items:center;gap:8px;font:700 17px "Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+.injt-h img{width:24px;height:24px;object-fit:contain}
+.injt-h .nx{margin-left:auto;font:500 11px Inter,sans-serif;letter-spacing:0;text-transform:none;color:var(--mut);text-align:right}
+.injt-h .nx b{color:var(--txt);font-weight:600}
+.injr{display:grid;grid-template-columns:24px 1fr auto;gap:4px 10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.injr .who{min-width:0}
+.injr .who .pn,.injr .who .nm0{font-weight:600}
+.injr .meta{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+.injr .meta em{font-style:normal;color:var(--mut)}
+.injr .rt{text-align:right;font-size:11px;color:var(--mut);white-space:nowrap}
+.injr .rt b{display:block;color:var(--txt);font-weight:600;font-size:12px}
+.st-pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 6px;vertical-align:1px;white-space:nowrap}
+.st-Out{background:var(--toughbg);color:var(--tough)}
+.st-Doubtful{background:rgba(255,140,60,.15);color:#ff9a52}
+.st-Uncertain{background:rgba(255,207,92,.13);color:#ffcf5c}
+.st-Game-time{background:rgba(87,163,255,.15);color:#7db7ff}
+.st-Ready{background:var(--softbg);color:var(--soft)}
+.inj-note{margin-top:14px}
+/* injuries inside matchup */
+.mi{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 10px}
+.mi span{font-size:11px;color:var(--mut);background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+.mi span b{color:var(--txt);font-weight:600}
+.pm .st-pill{margin-left:2px;font-size:9px;padding:1px 4px}
+.pm tr.inj-out td{opacity:.55}
+.pm tr.inj-out td:first-child{opacity:1}

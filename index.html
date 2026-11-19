@@ -23,6 +23,7 @@
       <button role="tab" data-tab="schedule" class="on">Schedule</button>
       <button role="tab" data-tab="matchup">Matchup</button>
       <button role="tab" data-tab="log">Game Log</button>
+      <button role="tab" data-tab="injuries">Injuries</button>
     </nav>
   </div>
 </header>
@@ -87,6 +88,26 @@
       <div class="card" id="mPlayersHome"></div>
       <div class="card" id="mPlayersAway"></div>
     </div>
+  </section>
+
+  <!-- INJURIES -->
+  <section id="tab-injuries" class="panel">
+    <div class="inj-top">
+      <div>
+        <h2 class="h2" style="margin:0">Injury report</h2>
+        <p class="hint" id="injStamp"></p>
+      </div>
+      <a class="credit" id="injCredit" href="https://basketnews.com/news-212393-euroleague-injury-report-updated-daily.html" target="_blank" rel="noopener">Source: <b>BasketNews</b> injury report ↗</a>
+    </div>
+    <div class="bar wrapbar">
+      <label class="fld">Team <select id="iTeam"></select></label>
+      <label class="fld">Show
+        <select id="iScope"><option value="round">Teams playing next round</option><option value="all">All teams</option></select>
+      </label>
+      <div class="chips stat-chips" id="iStatus"></div>
+    </div>
+    <div id="injList" class="inj-grid"></div>
+    <p class="hint inj-note">Status, round and expected return as reported by BasketNews. Reason and return are short summaries; open the source for full notes. Player stats are this season's EuroLeague averages.</p>
   </section>
 
   <!-- GAME LOG -->
