@@ -184,7 +184,7 @@
         const r = dv?.[p.pos]?.rank?.[k];
         return `<td><div class="st"><b>${n1(p[k])}</b><span class="${rankCls(r)}" title="${esc(short(opp))} allows ${n1(dv?.[p.pos]?.[k])} ${k.toUpperCase()} per game to ${POS[p.pos]}s">#${r ?? '–'}</span></div></td>`;
       }).join('') + '</tr>').join('');
-    return `<h2 class="h2">${crest(team)}${esc(short(team))} players <small>vs ${esc(short(opp))} defence by position</small></h2>
+    return `<h2 class="h2">${crest(team)}${esc(short(team))} players <small>vs ${esc(short(opp))} defence by position · tap a name for his game log</small></h2>
       <div class="tablewrap" style="border:0;background:none"><table class="pm"><thead><tr><th class="t">Player</th>${STATS4.map(s => `<th>${s[1]}</th>`).join('')}</tr></thead>
       <tbody>${body || `<tr><td colspan="5" class="empty">No games played yet.</td></tr>`}</tbody></table></div>`;
   }
@@ -214,7 +214,7 @@
   }
 
   const COLS = [['round', 'Rd'], ['utc', 'Date', 't'], ['name', 'Player', 't'], ['pos', 'Pos'], ['team', 'Team', 't'], ['opp', 'Opp', 't'], ['res', 'Res'],
-    ['min', 'MIN'], ['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fg3m', '3PM'], ['fg3a', '3PA'], ['stl', 'STL'], ['blk', 'BLK'], ['tov', 'TOV'], ['pir', 'PIR']];
+    ['min', 'MIN'], ['pts', 'PTS'], ['reb', 'REB'], ['ast', 'AST'], ['fgm', 'FGM'], ['fga', 'FGA'], ['fg3m', '3PM'], ['fg3a', '3PA'], ['ftm', 'FTM'], ['fta', 'FTA'], ['stl', 'STL'], ['blk', 'BLK'], ['tov', 'TOV'], ['pir', 'PIR']];
 
   function renderLog() {
     const t = $('#lTeam').value, pos = $('#lPos').value, q = $('#lPlayer').value.trim().toLowerCase(), last = +$('#lLast').value;
@@ -236,8 +236,10 @@
     let hitKey = null, line = null;
     if (single) {
       const r0 = rows[0], n = rows.length, avg = f => (rows.reduce((s, r) => s + r[f], 0) / n).toFixed(1);
+      const pct = (m, a) => { const A = rows.reduce((s, r) => s + (r[a] || 0), 0); return A ? (100 * rows.reduce((s, r) => s + (r[m] || 0), 0) / A).toFixed(1) + '%' : '–'; };
       $('#logSummary').innerHTML = `<div class="stat who"><span>${esc(short(r0.team))} · ${POS[r0.pos]}</span><b>${esc(r0.name)}</b></div>` +
-        [['GP', n], ['MIN', avg('min')], ['PTS', avg('pts')], ['REB', avg('reb')], ['AST', avg('ast')], ['3PM', avg('fg3m')]]
+        [['GP', n], ['MIN', avg('min')], ['PTS', avg('pts')], ['REB', avg('reb')], ['AST', avg('ast')], ['3PM', avg('fg3m')],
+         ['FG%', pct('fgm', 'fga')], ['FT%', pct('ftm', 'fta')]]
           .map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
       hitKey = $('#pStat').value; line = parseFloat($('#pLine').value);
       const val = r => hitKey === 'pra' ? r.pts + r.reb + r.ast : r[hitKey];

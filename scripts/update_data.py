@@ -206,7 +206,8 @@ def build(raw):
                             "W" if won else "L", pid, row[P["name"]], row[P["pos"]],
                             round(row[P["sec"]] / 60, 1), row[P["pts"]], row[P["reb"]], row[P["ast"]],
                             row[P["fg3m"]], row[P["fg3a"]], row[P["start"]], row[P["stl"]],
-                            row[P["blk"]], row[P["tov"]], row[P["pir"]]])
+                            row[P["blk"]], row[P["tov"]], row[P["pir"]],
+                            row[P["fgm"]], row[P["fga"]], row[P["ftm"]], row[P["fta"]]])
 
     # ---- team season stats ----
     teams = {}
@@ -297,7 +298,8 @@ def build(raw):
         "dvpLeague": lg,
         "players": plist,
         "logFields": ["round", "game", "utc", "team", "opp", "ha", "res", "id", "name", "pos", "min",
-                      "pts", "reb", "ast", "fg3m", "fg3a", "start", "stl", "blk", "tov", "pir"],
+                      "pts", "reb", "ast", "fg3m", "fg3a", "start", "stl", "blk", "tov", "pir",
+                      "fgm", "fga", "ftm", "fta"],
         "log": log,
     }
     with open(OUT, "w") as f:

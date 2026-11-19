@@ -138,8 +138,9 @@ h1 em{font-style:normal;color:var(--org)}
 .tbl th.sorted{color:var(--org2)}
 .tbl td.t,.tbl th.t{text-align:left}
 .tbl tr:hover td{background:rgba(255,255,255,.02)}
-.tbl .pn{font-weight:600;cursor:pointer}
-.tbl .pn:hover{color:var(--org2)}
+.pn{font-weight:600;cursor:pointer;color:var(--txt);text-decoration:underline;text-decoration-color:rgba(255,107,0,.55);text-decoration-thickness:1.5px;text-underline-offset:3px}
+.pn:hover{color:var(--org2);text-decoration-color:var(--org2)}
+.pn::after{content:"›";margin-left:4px;color:var(--org);font-weight:700;text-decoration:none;display:inline-block}
 .tbl td.hit{color:var(--soft);font-weight:700}
 .tbl td.miss{color:var(--mut)}
 .pos{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:5px;font-size:10px;font-weight:700;background:var(--line);color:var(--mut)}
