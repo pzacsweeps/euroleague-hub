@@ -1,0 +1,45 @@
+name: Morning update
+
+# Once a day at 07:34 UTC. Reads the EuroLeague schedule once, then:
+#  - updates the stats if a round was completed (the morning after its last game)
+#  - updates injuries if there are games today, and saves today's first tip-off
+#    time so the pre-game check can run without reading the schedule again
+on:
+  schedule:
+    - cron: "34 7 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hub-data
+  cancel-in-progress: false
+
+jobs:
+  morning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: What is due today?
+        id: check
+        run: python3 scripts/auto.py morning
+      - name: Update stats (round complete)
+        if: steps.check.outputs.stats == 'true'
+        run: |
+          python3 scripts/update_data.py
+          python3 scripts/auto.py stats --mark "${{ steps.check.outputs.round }}"
+      - name: Update injuries (game day)
+        if: steps.check.outputs.injuries == 'true'
+        run: |
+          python3 scripts/update_injuries.py
+          python3 scripts/auto.py injuries --mark morning
+      - name: Commit
+        run: |
+          git config user.name "euroleague-hub-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Morning update $(date -u +'%Y-%m-%d')"
+          for i in 1 2 3; do git pull --rebase -q && git push && exit 0; sleep 5; done
+          exit 1

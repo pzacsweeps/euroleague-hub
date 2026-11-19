@@ -1,18 +1,18 @@
 name: Update injuries
 
-# Automatic on game days: once in the morning (from 07:30 UTC) and once ~30 min
-# before the first tip-off. A light check runs every 15 minutes and only pulls
-# the report when one of those is due. Can also be run by hand at any time.
+# Pre-game: on Tue-Fri afternoons/evenings a quick check (no network calls) looks
+# at today's saved first tip-off time and pulls the injury report once, about
+# 30 minutes before it. Can also be run by hand at any time.
 on:
   schedule:
-    - cron: "4,19,34,49 * * * *"
+    - cron: "4,19,34,49 14-19 * * 2-5"
   workflow_dispatch: {}
 
 permissions:
   contents: write
 
 concurrency:
-  group: injuries
+  group: hub-data
   cancel-in-progress: false
 
 jobs:
@@ -20,24 +20,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Is an update due?
+      - name: Is the pre-game update due?
         id: check
         if: github.event_name == 'schedule'
-        run: python scripts/auto.py injuries
+        run: python3 scripts/auto.py pregame
       - name: Pull the BasketNews injury report
         if: github.event_name != 'schedule' || steps.check.outputs.due == 'true'
         run: |
-          python scripts/update_injuries.py
-          python scripts/auto.py injuries --mark "${{ steps.check.outputs.slot || 'manual' }}"
+          python3 scripts/update_injuries.py
+          python3 scripts/auto.py injuries --mark "${{ github.event_name == 'schedule' && 'pregame' || 'manual' }}"
       - name: Commit if changed
-        if: github.event_name != 'schedule' || steps.check.outputs.due == 'true'
         run: |
           git config user.name "euroleague-hub-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add data/injuries.json data/auto_state.json
+          git add data/
           if git diff --cached --quiet; then echo "No changes"; exit 0; fi
           git commit -m "Injury update $(date -u +'%Y-%m-%d %H:%M UTC')"
           for i in 1 2 3; do git pull --rebase -q && git push && exit 0; sleep 5; done

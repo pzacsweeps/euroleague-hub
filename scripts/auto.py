@@ -1,16 +1,15 @@
 """
-Decides whether a scheduled run should update anything.
+Decides what the scheduled runs should update. The EuroLeague schedule is read
+once per day (morning run); the pre-game checks only read the saved state.
 
-    python scripts/auto.py injuries   -> due on game days: once in the morning,
-                                         and once ~30 min before the first tip-off
-    python scripts/auto.py stats      -> due the morning after a round is complete
+    python scripts/auto.py morning   -> once a day: reads the schedule, saves today's
+                                        first tip-off, says whether stats and/or
+                                        injuries are due
+    python scripts/auto.py pregame   -> afternoon/evening checks: is it ~30 min before
+                                        today's first tip-off? (no network call)
+    python scripts/auto.py <injuries|stats> --mark <slot>   -> record that a slot ran
 
-Prints the decision and, inside GitHub Actions, writes `due=true|false` and
-`slot=<name>` to $GITHUB_OUTPUT. `--mark <slot>` records that a slot ran
-(stored in data/auto_state.json) so each slot fires once per day / round.
-
-Game times come live from the official EuroLeague schedule, so postponed or
-moved games are handled automatically.
+Inside GitHub Actions the decisions are written to $GITHUB_OUTPUT.
 """
 import json
 import os
@@ -24,8 +23,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(ROOT, "data", "auto_state.json")
 HUB = os.path.join(ROOT, "data", "hub.json")
 
-MORNING_FROM = (7, 30)          # UTC: first check from 07:30 UTC (07:30 UK in winter, 08:30 in summer)
-MORNING_UNTIL = (12, 0)         # give up on the morning slot after noon
 PREGAME_FROM = timedelta(minutes=45)   # run when first tip-off is 45..10 min away
 PREGAME_UNTIL = timedelta(minutes=10)
 
@@ -69,24 +66,6 @@ def schedule():
     return out
 
 
-def injuries_due(t, games, st):
-    today = t.date().isoformat()
-    todays = sorted(g["utc"] for g in games if g["utc"].date() == t.date())
-    if not todays:
-        return False, "no games today"
-    first = todays[0]
-    done = st.get("injuries", {})
-    if t < first - PREGAME_UNTIL and first - t <= PREGAME_FROM:
-        if done.get("pregame") != today:
-            return True, f"pregame (first tip-off {first:%H:%M} UTC)"
-        return False, "pregame already done today"
-    m_from = t.replace(hour=MORNING_FROM[0], minute=MORNING_FROM[1], second=0, microsecond=0)
-    m_until = t.replace(hour=MORNING_UNTIL[0], minute=MORNING_UNTIL[1], second=0, microsecond=0)
-    if m_from <= t < min(m_until, first - PREGAME_FROM) and done.get("morning") != today:
-        return True, "morning"
-    return False, f"nothing due (first tip-off {first:%H:%M} UTC)"
-
-
 def stats_due(t, games, st):
     rounds = {}
     for g in games:
@@ -113,12 +92,22 @@ def stats_due(t, games, st):
     return True, f"round {latest} complete", latest
 
 
-def emit(due, slot, why):
-    print(f"due={str(due).lower()} slot={slot} :: {why}")
+def emit_many(**kv):
+    print(" ".join(f"{k}={v}" for k, v in kv.items()))
     out = os.environ.get("GITHUB_OUTPUT")
     if out:
         with open(out, "a") as f:
-            f.write(f"due={str(due).lower()}\nslot={slot}\n")
+            for k, v in kv.items():
+                f.write(f"{k}={str(v).lower() if isinstance(v, bool) else v}\n")
+
+
+def save_today(st, t, games):
+    todays = sorted(g["utc"] for g in games if g["utc"].date() == t.date())
+    st["today"] = {"date": t.date().isoformat(),
+                   "firstTip": todays[0].strftime("%Y-%m-%dT%H:%M:%SZ") if todays else None,
+                   "games": len(todays)}
+    save_state(st)
+    return st["today"]
 
 
 def main():
@@ -135,13 +124,35 @@ def main():
         save_state(st)
         print(f"marked {kind} {slot}")
         return
-    games = schedule()
-    if kind == "injuries":
-        due, why = injuries_due(t, games, st)
-        emit(due, "pregame" if why.startswith("pregame") else "morning", why)
-    else:
-        due, why, rnd = stats_due(t, games, st)
-        emit(due, f"round-{rnd}", why)
+
+    if kind == "morning":
+        games = schedule()                      # the one schedule read of the day
+        today = save_today(st, t, games)
+        s_due, s_why, rnd = stats_due(t, games, st)
+        i_due = bool(today["games"]) and st.get("injuries", {}).get("morning") != today["date"]
+        print(f"stats: {s_why} | injuries: {str(today['games']) + ' game(s) today, first at ' + today['firstTip'] if today['games'] else 'no games today'}")
+        emit_many(stats=s_due, round=f"round-{rnd}", injuries=i_due)
+        return
+
+    if kind == "pregame":
+        today = st.get("today")
+        if not today or today.get("date") != t.date().isoformat():
+            # morning run missed: read the schedule once and save it for the rest of the day
+            today = save_today(st, t, schedule())
+        due, why = False, "no games today"
+        if today.get("firstTip"):
+            first = datetime.strptime(today["firstTip"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            if st.get("injuries", {}).get("pregame") == today["date"]:
+                why = "pre-game update already done today"
+            elif first - PREGAME_FROM <= t < first - PREGAME_UNTIL:
+                due, why = True, f"first tip-off {first:%H:%M} UTC"
+            else:
+                why = f"not yet (first tip-off {first:%H:%M} UTC)"
+        print(why)
+        emit_many(due=due)
+        return
+
+    sys.exit(f"unknown command {kind}")
 
 
 if __name__ == "__main__":
