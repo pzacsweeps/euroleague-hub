@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EuroLeague Hub</title>
+<meta name="description" content="EuroLeague schedule, team matchups, defence vs position and every player's game log.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-in">
+    <div class="brand">
+      <span class="ball" aria-hidden="true"></span>
+      <div>
+        <h1>EUROLEAGUE <em>HUB</em></h1>
+        <p class="sub" id="seasonLine">Loading season…</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="schedule" class="on">Schedule</button>
+      <button role="tab" data-tab="matchup">Matchup</button>
+      <button role="tab" data-tab="log">Game Log</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- SCHEDULE -->
+  <section id="tab-schedule" class="panel on">
+    <div class="bar">
+      <div class="round-nav">
+        <button class="icon" id="rPrev" aria-label="Previous round">‹</button>
+        <select id="roundSel" aria-label="Round"></select>
+        <button class="icon" id="rNext" aria-label="Next round">›</button>
+      </div>
+      <p class="hint" id="schedHint"></p>
+    </div>
+    <div class="chips" id="teamChips"></div>
+    <div id="schedList" class="games"></div>
+  </section>
+
+  <!-- MATCHUP -->
+  <section id="tab-matchup" class="panel">
+    <div class="bar wrapbar">
+      <label class="fld">Game
+        <select id="mGame"></select>
+      </label>
+      <span class="or">or pick any two</span>
+      <label class="fld">Home <select id="mHome"></select></label>
+      <label class="fld">Away <select id="mAway"></select></label>
+    </div>
+    <div id="mHead" class="mhead"></div>
+    <div class="card">
+      <h2 class="h2">Team comparison <small>season averages, rank of 20 in brackets</small></h2>
+      <div id="mCompare"></div>
+    </div>
+    <div class="card">
+      <h2 class="h2">Defence vs position <small>per game allowed to each position, #1 = gives up the most</small></h2>
+      <div id="mDvp" class="dvp-grid"></div>
+    </div>
+    <div class="legend">
+      <span><i class="dot soft"></i>Soft matchup (opp ranks 1 to 6, allows a lot)</span>
+      <span><i class="dot mid"></i>Neutral</span>
+      <span><i class="dot tough"></i>Tough matchup (opp ranks 15 to 20)</span>
+    </div>
+    <div class="two">
+      <div class="card" id="mPlayersHome"></div>
+      <div class="card" id="mPlayersAway"></div>
+    </div>
+  </section>
+
+  <!-- GAME LOG -->
+  <section id="tab-log" class="panel">
+    <div class="bar wrapbar">
+      <label class="fld">Team <select id="lTeam"></select></label>
+      <label class="fld">Position
+        <select id="lPos"><option value="">All</option><option value="G">Guard</option><option value="F">Forward</option><option value="C">Center</option></select>
+      </label>
+      <label class="fld grow">Player
+        <input id="lPlayer" list="lPlayers" placeholder="Search a player" autocomplete="off">
+        <datalist id="lPlayers"></datalist>
+      </label>
+      <label class="fld">Last
+        <select id="lLast"><option value="0">All games</option><option value="5">5</option><option value="10">10</option></select>
+      </label>
+      <button class="ghost" id="lReset">Reset</button>
+    </div>
+    <div id="propBox" class="prop" hidden>
+      <span class="prop-t">Prop check</span>
+      <select id="pStat"><option value="pts">Points</option><option value="reb">Rebounds</option><option value="ast">Assists</option><option value="fg3m">3PT made</option><option value="pra">Pts+Reb+Ast</option></select>
+      <span>over</span>
+      <input id="pLine" type="number" step="0.5" value="9.5" inputmode="decimal">
+      <span id="pOut" class="prop-out"></span>
+    </div>
+    <div id="logSummary" class="summary"></div>
+    <div class="tablewrap"><table id="logTable" class="tbl"></table></div>
+    <p class="hint" id="logCount"></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span>Data: official EuroLeague feed · <span id="updated"></span></span>
+    <span class="handles"><b>X</b> @PZACSweeps <i>·</i> <b>TikTok</b> @pzac6</span>
+  </div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
