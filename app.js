@@ -122,6 +122,10 @@
     $('#mGame').onchange = e => { const g = D.games.find(x => x.code == e.target.value); if (g) setMatchup(g.home, g.away, g.code); };
     $('#mHome').onchange = () => setMatchup($('#mHome').value, $('#mAway').value);
     $('#mAway').onchange = () => setMatchup($('#mHome').value, $('#mAway').value);
+    $('#gpSpread').oninput = renderGameProps;
+    $('#gpTotal').oninput = renderGameProps;
+    $('#gpLast').onchange = renderGameProps;
+    $('#gpProj').onclick = () => { setProjection(); renderGameProps(); };
     const first = D.games.filter(g => g.round === nr && !g.played).sort((a, b) => (a.utc || '').localeCompare(b.utc || ''))[0]
       || D.games.find(g => g.round === nr);
     if (first) setMatchup(first.home, first.away, first.code);
@@ -143,6 +147,9 @@
       <div class="mside">${crest(h, '')}<div class="nm">${esc(th.short)}</div><div class="rec">${th.w}-${th.l} · Home</div>${form(th)}</div>
       <div class="vs">VS<small>${g ? (g.played ? `Final ${g.hs}-${g.as}` : d ? `${fmtDay(d)}, ${fmtTime(d)}` : '') : 'Custom'}</small>${g ? `<small>Round ${g.round}</small>` : ''}</div>
       <div class="mside">${crest(a, '')}<div class="nm">${esc(ta.short)}</div><div class="rec">${ta.w}-${ta.l} · Away</div>${form(ta)}</div>`;
+
+    setProjection();
+    renderGameProps();
 
     // comparison rows: [key, label, higherIsBetter, suffix]
     const rows = [['ppg', 'Points', 1], ['oppg', 'Points allowed', 0], ['diff', 'Point diff', 1], ['pace', 'Pace', 1],
@@ -187,6 +194,67 @@
     return `<h2 class="h2">${crest(team)}${esc(short(team))} players <small>vs ${esc(short(opp))} defence by position · tap a name for his game log</small></h2>
       <div class="tablewrap" style="border:0;background:none"><table class="pm"><thead><tr><th class="t">Player</th>${STATS4.map(s => `<th>${s[1]}</th>`).join('')}</tr></thead>
       <tbody>${body || `<tr><td colspan="5" class="empty">No games played yet.</td></tr>`}</tbody></table></div>`;
+  }
+
+  // ---------- GAME PROP CHECK ----------
+  const half = x => Math.round(x * 2) / 2;
+  const sgn = x => (x > 0 ? '+' : '') + x;
+  function teamGames(t) {
+    return D.games.filter(g => g.played && (g.home === t || g.away === t))
+      .sort((a, b) => (a.utc || '').localeCompare(b.utc || ''))
+      .map(g => {
+        const home = g.home === t, own = home ? g.hs : g.as, opp = home ? g.as : g.hs;
+        return { g, home, own, opp, margin: own - opp, total: g.hs + g.as, oppCode: home ? g.away : g.home };
+      });
+  }
+  function setProjection() {
+    const h = T[state.mHome], a = T[state.mAway];
+    if (!h?.gp || !a?.gp) { $('#gpProjTxt').textContent = ''; return; }
+    // simple projection: average of each side's scoring and the other side's points allowed, +2 home edge
+    const hp = (h.ppg + a.oppg) / 2 + 1, ap = (a.ppg + h.oppg) / 2 - 1;
+    const spread = half(-(hp - ap)), total = half(hp + ap);
+    $('#gpSpread').value = spread === 0 ? -0.5 : spread;
+    $('#gpTotal').value = total;
+    $('#gpProjTxt').textContent = `Hub projection: ${short(state.mHome)} ${hp.toFixed(1)} · ${short(state.mAway)} ${ap.toFixed(1)} (season scoring vs points allowed, 2 pt home edge). Overwrite with your bookie's lines.`;
+  }
+  function renderGameProps() {
+    const h = state.mHome, a = state.mAway;
+    $('#gpHomeLab').textContent = short(h);
+    const sp = parseFloat($('#gpSpread').value), tot = parseFloat($('#gpTotal').value), last = +$('#gpLast').value;
+    const block = (t, line, venueHome) => {
+      let gs = teamGames(t);
+      if (last) gs = gs.slice(-last);
+      if (!gs.length) return `<div class="gpt"><div class="gpt-h">${crest(t, '')}${esc(short(t))}</div><p class="hint">No games played yet.</p></div>`;
+      const res = gs.map(x => ({ ...x,
+        cov: isNaN(line) ? null : (x.margin + line > 0 ? 'y' : x.margin + line < 0 ? 'n' : 'p'),
+        ov: isNaN(tot) ? null : (x.total > tot ? 'y' : x.total < tot ? 'n' : 'p') }));
+      const count = (arr, k) => { const dec = arr.filter(r => r[k] && r[k] !== 'p'); const y = dec.filter(r => r[k] === 'y').length; return { y, n: dec.length, pct: dec.length ? Math.round(y / dec.length * 100) : null }; };
+      const all = count(res, 'cov'), ven = count(res.filter(r => r.home === venueHome), 'cov');
+      const oAll = count(res, 'ov'), oVen = count(res.filter(r => r.home === venueHome), 'ov');
+      const avg = k => (res.reduce((s, r) => s + r[k], 0) / res.length);
+      const vlab = venueHome ? 'home' : 'away';
+      const cls = p => p == null ? '' : p >= 60 ? 'good' : p <= 40 ? 'bad' : '';
+      const fmt = c => c.n ? `${c.y}/${c.n}` : '–';
+      const lineTxt = isNaN(line) ? 'no line' : `${sgn(line)}`;
+      const rows = res.slice().reverse().map(r => `<tr class="${r.home === venueHome ? 'venue' : ''}">
+        <td>R${r.g.round}</td><td class="t">${r.home ? 'vs' : '@'} ${crest(r.oppCode)}${esc(short(r.oppCode))}</td>
+        <td><span class="tag ${r.margin > 0 ? 'w' : 'l'}">${r.margin > 0 ? 'W' : 'L'}</span> ${r.own}-${r.opp}</td>
+        <td class="mg">${sgn(r.margin)}</td>
+        <td class="${r.cov || ''}">${r.cov ? { y: '✓', n: '✗', p: 'P' }[r.cov] : '–'}</td>
+        <td>${r.total}</td>
+        <td class="${r.ov || ''}">${r.ov ? { y: 'O', n: 'U', p: 'P' }[r.ov] : '–'}</td></tr>`).join('');
+      return `<div class="gpt">
+        <div class="gpt-h">${crest(t, '')}${esc(short(t))}<span class="ln">${esc(short(t))} ${lineTxt}</span></div>
+        <div class="gpk">
+          <div><span>Covered ${lineTxt}</span><b class="${cls(all.pct)}">${all.pct ?? '–'}${all.pct != null ? '%' : ''}</b><i>${fmt(all)} · <em>${vlab} ${fmt(ven)}</em></i></div>
+          <div><span>Over ${isNaN(tot) ? '–' : tot}</span><b class="${cls(oAll.pct)}">${oAll.pct ?? '–'}${oAll.pct != null ? '%' : ''}</b><i>${fmt(oAll)} · <em>${vlab} ${fmt(oVen)}</em></i></div>
+          <div><span>Avg margin</span><b>${sgn(avg('margin').toFixed(1))}</b><i>${res.filter(r => r.margin > 0).length}-${res.filter(r => r.margin < 0).length} in these games</i></div>
+          <div><span>Avg total</span><b>${avg('total').toFixed(1)}</b><i>scores ${avg('own').toFixed(1)} · allows ${avg('opp').toFixed(1)}</i></div>
+        </div>
+        <div class="tablewrap" style="border:0;background:none"><table class="gpl"><thead><tr><th>Rd</th><th class="t">Opponent</th><th>Score</th><th class="mg">Margin</th><th>Cover</th><th>Total</th><th>O/U</th></tr></thead><tbody>${rows}</tbody></table></div>
+      </div>`;
+    };
+    $('#gpOut').innerHTML = block(h, sp, true) + block(a, isNaN(sp) ? NaN : -sp, false);
   }
 
   // ---------- GAME LOG ----------

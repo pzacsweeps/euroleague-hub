@@ -54,6 +54,23 @@
     </div>
     <div id="mHead" class="mhead"></div>
     <div class="card">
+      <h2 class="h2">Game prop check <small>enter the bookie's lines · cover and over counts from this season's results</small></h2>
+      <div class="gp-in">
+        <label class="fld"><span class="flt">Handicap <b id="gpHomeLab"></b></span>
+          <input id="gpSpread" type="number" step="0.5" inputmode="decimal">
+        </label>
+        <label class="fld">Total points
+          <input id="gpTotal" type="number" step="0.5" inputmode="decimal">
+        </label>
+        <label class="fld">Games
+          <select id="gpLast"><option value="0">Whole season</option><option value="5">Last 5</option><option value="10">Last 10</option></select>
+        </label>
+        <button class="ghost" id="gpProj" title="Reset the lines to the hub's projection">Use projection</button>
+        <p class="hint gp-proj" id="gpProjTxt"></p>
+      </div>
+      <div id="gpOut" class="two gp-two"></div>
+    </div>
+    <div class="card">
       <h2 class="h2">Team comparison <small>season averages, rank of 20 in brackets</small></h2>
       <div id="mCompare"></div>
     </div>

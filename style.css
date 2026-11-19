@@ -192,3 +192,41 @@ h1 em{font-style:normal;color:var(--org)}
   .wrapbar .fld{flex:1 1 45%}
   .or{display:none}
 }
+
+/* game prop check */
+.gp-in{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}
+.gp-in .fld input{width:120px;min-width:0}
+.gp-in .fld select{min-width:130px}
+.gp-in .flt b{color:var(--org2);text-transform:none;letter-spacing:0;font-weight:600}
+.gp-proj{flex-basis:100%;margin-top:-2px}
+.gp-two{gap:14px}
+.gpt{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.gpt-h{display:flex;align-items:center;gap:8px;font:700 17px "Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase;margin-bottom:10px}
+.gpt-h img{width:24px;height:24px;object-fit:contain}
+.gpt-h .ln{margin-left:auto;font:600 13px Inter,sans-serif;letter-spacing:0;text-transform:none;color:var(--org2);background:var(--orgbg);border-radius:6px;padding:3px 8px}
+.gpk{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+@media (max-width:520px){.gpk{grid-template-columns:repeat(2,1fr)}}
+.gpk div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.gpk b{display:block;font:700 20px "Barlow Condensed",sans-serif}
+.gpk b.good{color:var(--soft)} .gpk b.bad{color:var(--tough)}
+.gpk span{display:block;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+.gpk i{display:block;font-style:normal;font-size:11px;color:var(--dim);margin-top:2px}
+.gpk i em{font-style:normal;color:var(--mut);font-weight:600}
+.gpl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px}
+.gpl th,.gpl td{padding:6px 5px;text-align:center;border-top:1px solid var(--line);white-space:nowrap}
+.gpl th{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600;border-top:0}
+.gpl td.t,.gpl th.t{text-align:left}
+.gpl .y{color:var(--soft);font-weight:700} .gpl .n{color:var(--tough);font-weight:700} .gpl .p{color:var(--mut);font-weight:700}
+.gpl tr.venue td:first-child{box-shadow:inset 3px 0 0 var(--org)}
+.gp-two>*{min-width:0}
+.gpk>div{min-width:0}
+@media (max-width:600px){
+  .gpt{padding:10px}
+  .gpk{gap:6px}
+  .gpl{font-size:12px}
+  .gpl th,.gpl td{padding:6px 3px}
+  .gpl .crest{display:none}
+  .gp-in .fld{flex:1 1 40%}
+  .gp-in .fld input,.gp-in .fld select{width:100%}
+}
+@media (max-width:600px){.gpl .mg{display:none}.gpl .tag{display:none}}
