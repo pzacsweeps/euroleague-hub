@@ -40,17 +40,20 @@ STATUS_ORDER = ["Out", "Doubtful", "Uncertain", "Game-time", "Ready"]
 
 # (pattern, label) checked in order; first body-part hit wins, extra tags appended
 REASONS = [
-    (r"achilles", "Achilles"), (r"\bacl\b|cruciate", "ACL"), (r"knee", "Knee"), (r"ankle", "Ankle"),
-    (r"calf", "Calf"), (r"hamstring", "Hamstring"), (r"groin|adductor", "Groin"), (r"quad", "Quad"),
-    (r"hip|psoas", "Hip"), (r"back\b|lumbar", "Back"), (r"shoulder", "Shoulder"), (r"foot|plantar", "Foot"),
-    (r"wrist", "Wrist"), (r"hand\b|finger|thumb", "Hand"), (r"oblique", "Oblique"), (r"abdominal|abdomen", "Abdominal"),
-    (r"concussion|head\b", "Head"), (r"nose|face|facial|eye\b", "Face"), (r"muscle|strain", "Muscle"),
-    (r"illness|ill\b|sick|flu|virus", "Illness"), (r"personal|family", "Personal"),
-    (r"suspen", "Suspended"), (r"new signing|signed", "New signing"),
-    (r"not included in (the )?official euroleague roster|not registered", "Not registered"),
-    (r"coach'?s decision", "Coach's decision"), (r"rest\b|load management", "Rest"),
-    (r"undisclosed", "Undisclosed"),
+    (r"achilles", "Achilles"), (r"\bacl\b|cruciate", "ACL"), (r"meniscus|\bknee", "Knee"), (r"ankle", "Ankle"),
+    (r"\bcalf", "Calf"), (r"hamstring", "Hamstring"), (r"thigh|quadricep|\bquad\b", "Thigh"), (r"groin|adductor", "Groin"),
+    (r"\bhip\b|psoas", "Hip"), (r"\bback (injury|spasm|pain|problem|issue)|lower back|lumbar", "Back"),
+    (r"shoulder", "Shoulder"), (r"\bfoot\b|plantar", "Foot"), (r"wrist", "Wrist"),
+    (r"\bhand\b|finger|thumb", "Hand"), (r"oblique", "Oblique"), (r"abdominal|abdomen", "Abdominal"),
+    (r"concussion|head (injury|blow)", "Head"), (r"\bnose\b|\bface\b|facial|\beye\b", "Face"),
+    (r"contusion|bone bruise|\bbruise", "Bruise"), (r"\bleg\b", "Leg"), (r"muscle|strain", "Muscle"),
+    (r"illness|\bill\b|\bsick|\bflu\b|virus", "Illness"), (r"personal reason|family reason", "Personal"),
+    (r"suspen", "Suspended"), (r"\bfitness\b", "Fitness"), (r"new signing", "New signing"),
+    (r"not included in (the )?official euroleague roster|deregistered|not registered", "Not registered"),
+    (r"coach'?s decision", "Coach's decision"), (r"\brest\b|load management", "Rest"),
+    (r"undisclosed", "Undisclosed"), (r"\binjur", "Injury"),
 ]
+GENERIC = ("Coach's decision", "Undisclosed", "Muscle", "Injury", "Leg", "Fitness", "New signing")
 WORDNUM = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "eight": "8", "a few": "few"}
 
 
@@ -73,11 +76,14 @@ def reason_of(comment):
     for pat, lab in REASONS:
         if re.search(pat, c) and lab not in tags:
             tags.append(lab)
-    body = [t for t in tags if t not in ("Coach's decision", "Undisclosed", "Muscle")]
+    body = [t for t in tags if t not in GENERIC]
     if body:
         out = body[0]
     elif tags:
-        out = tags[0]
+        pref = ["Muscle", "Leg", "Fitness", "New signing", "Undisclosed", "Coach's decision", "Injury"]
+        out = sorted(tags, key=lambda t: pref.index(t) if t in pref else 99)[0]
+        if out == "Undisclosed" and "Injury" in tags:
+            out = "Undisclosed injury"
     else:
         out = ""
     if "surgery" in c and out not in ("", "Coach's decision"):
@@ -91,13 +97,19 @@ def return_of(comment, rnd):
     c = comment.lower()
     if "season" in rnd.lower() or "out for (the )?season" in c or "season-ending" in c:
         return "Season"
-    m = re.search(r"until round (\d+(?:\s*-\s*\d+)?)", c)
+    m = re.search(r"(?:until|return is|return in|back for|before) round (\d+(?:\s*-\s*\d+)?)", c)
     if m:
         return "R" + m.group(1).replace(" ", "")
     m = re.search(r"(\d+(?:\s*-\s*\d+)?|one|two|three|four|five|six|eight|a few)\s+(week|month)s?", c)
     if m:
         n = WORDNUM.get(m.group(1), m.group(1).replace(" ", ""))
         return f"~{n} {m.group(2)}{'s' if n != '1' else ''}"
+    m = re.search(r"(?:until|before|return in|out until|by) (?:the )?(?:(early|mid|late|end of)[- ]?)?(?:the )?(?:end of )?(january|february|march|april|may|june|october|november|december)", c)
+    if m:
+        part = {"early": "Early ", "mid": "Mid ", "late": "Late ", "end of": "End "}.get(m.group(1) or "", "")
+        if "end of" in c[m.start():m.end()] and not part:
+            part = "End "
+        return part + m.group(2)[:3].capitalize()
     if "indefinite" in c:
         return "Indefinite"
     return ""
