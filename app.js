@@ -317,7 +317,8 @@
     $('#lLast').onchange = renderLog;
     $('#lPlayer').oninput = renderLog;
     $('#lReset').onclick = () => { $('#lTeam').value = ''; $('#lPos').value = ''; $('#lPlayer').value = ''; $('#lLast').value = '0'; fillPlayerList(); renderLog(); };
-    $('#pStat').onchange = renderLog; $('#pLine').oninput = renderLog; $('#pMin').onchange = renderLog;
+    $('#pStat').onchange = renderLog; $('#pLine').oninput = renderLog;
+    $('#pLine').onchange = () => { const v = parseFloat($('#pLine').value); if (!isNaN(v)) $('#pLine').value = toHalf(v); renderLog(); }; $('#pMin').onchange = renderLog;
     $('#pView').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.pView = b.dataset.v;
       $('#pView').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderLog(); };
     renderLog();
@@ -354,6 +355,7 @@
     const single = ids.size === 1 && rows.length;
     $('#pViewWrap').hidden = !!single;
     let hitKey = $('#pStat').value, line = parseFloat($('#pLine').value);
+    if (!isNaN(line)) line = toHalf(line);
     if (!single && state.pView === 'rank') { $('#logSummary').innerHTML = ''; return renderRanking(rows, hitKey, line); }
     if (single) {
       const r0 = rows[0], n = rows.length, avg = f => (rows.reduce((s, r) => s + r[f], 0) / n).toFixed(1);
@@ -439,7 +441,7 @@
     $('#logTable').querySelectorAll('.pn').forEach(n => n.onclick = () => openLogFor(n.dataset.id));
     const strong = isNaN(line) ? 0 : list.filter(p => p.pct >= 70).length;
     $('#pOut').innerHTML = isNaN(line) ? '' : `<b>${strong}</b> of ${list.length} players over in 70%+ of games`;
-    $('#logCount').textContent = `Ranked by how often each player went over ${isNaN(line) ? '' : line + ' '}${STATLAB[hitKey]}` +
+    $('#logCount').textContent = `Hit rate ranking: players ordered by how often they went over ${isNaN(line) ? '' : line + ' '}${STATLAB[hitKey]}` +
       `${+$('#lLast').value ? ` in his last ${$('#lLast').value} games` : ''} · min ${minG} game${minG > 1 ? 's' : ''}. Tap a name for his game log.`;
   }
 
