@@ -362,7 +362,8 @@
       const pct = (m, a) => { const A = rows.reduce((s, r) => s + (r[a] || 0), 0); return A ? (100 * rows.reduce((s, r) => s + (r[m] || 0), 0) / A).toFixed(1) + '%' : '–'; };
       $('#logSummary').innerHTML = `<div class="stat who"><span>${esc(short(r0.team))} · ${POS[r0.pos]}</span><b>${esc(r0.name)}</b></div>` +
         [['GP', n], ['MIN', avg('min')], ['PTS', avg('pts')], ['REB', avg('reb')], ['AST', avg('ast')], ['3PM', avg('fg3m')],
-         ['FG%', pct('fgm', 'fga')], ['FT%', pct('ftm', 'fta')]]
+         ['FG%', pct('fgm', 'fga')], ['3P%', pct('fg3m', 'fg3a')], ['FT%', pct('ftm', 'fta')],
+         ['STL', avg('stl')], ['BLK', avg('blk')], ['TOV', avg('tov')]]
           .map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
       const val = r => hitKey === 'pra' ? r.pts + r.reb + r.ast : r[hitKey];
       if (!isNaN(line)) {

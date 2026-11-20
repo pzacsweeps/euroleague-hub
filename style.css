@@ -297,3 +297,12 @@ h1 em{font-style:normal;color:var(--org)}
   .tbl td.c-name{white-space:normal;line-height:1.5}
   .tbl td.c-name .st-pill{font-size:9px;padding:1px 4px}
 }
+.summary .stat{flex:1 1 64px;min-width:64px;padding:9px 10px}
+.summary .stat b{font-size:20px;white-space:nowrap}
+.summary .stat.who{flex:2 1 190px}
+@media (max-width:600px){
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .summary .stat{min-width:0;padding:8px}
+  .summary .stat b{font-size:18px}
+  .summary .stat.who{grid-column:1/-1}
+}
