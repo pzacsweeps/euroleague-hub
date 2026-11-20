@@ -31,6 +31,9 @@ jobs:
           python3 scripts/auto.py stats --mark "${{ steps.check.outputs.round }}"
       - name: Update injuries (game day)
         if: steps.check.outputs.injuries == 'true'
+        # a refusal from BasketNews must not lose the stats update or today's
+        # saved tip-off time; the pre-game check pulls injuries again later
+        continue-on-error: true
         run: |
           python3 scripts/update_injuries.py
           python3 scripts/auto.py injuries --mark morning

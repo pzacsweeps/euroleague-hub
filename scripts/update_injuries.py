@@ -191,16 +191,39 @@ def match_players(entries, players):
     return entries
 
 
+def fetch_page():
+    """BasketNews sometimes turns automated requests away (403/429) for a few
+    minutes; retry with growing waits before giving up."""
+    import time
+    import urllib.error
+    waits = [0, 30, 90, 180]
+    last = None
+    for i, w in enumerate(waits):
+        if w:
+            print(f"  BasketNews refused ({last}); retrying in {w}s ({i + 1}/{len(waits)})")
+            time.sleep(w)
+        try:
+            req = urllib.request.Request(SOURCE, headers={
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-GB,en;q=0.9"})
+            with urllib.request.urlopen(req, timeout=40) as r:
+                return r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            last = f"HTTP {e.code}"
+            if e.code not in (403, 429, 500, 502, 503, 504):
+                raise
+        except (urllib.error.URLError, TimeoutError) as e:
+            last = str(e)
+    sys.exit(f"BasketNews could not be reached after {len(waits)} tries ({last}); keeping the previous report.")
+
+
 def main():
     if "--file" in sys.argv:
         with open(sys.argv[sys.argv.index("--file") + 1], encoding="utf-8") as f:
             page = f.read()
     else:
-        req = urllib.request.Request(SOURCE, headers={
-            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
-            "Accept-Language": "en-GB,en;q=0.9"})
-        with urllib.request.urlopen(req, timeout=40) as r:
-            page = r.read().decode("utf-8", "replace")
+        page = fetch_page()
 
     p = Parser()
     p.feed(page)
