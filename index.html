@@ -23,7 +23,7 @@
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="schedule" class="on">Schedule</button>
       <button role="tab" data-tab="matchup">Matchup</button>
-      <button role="tab" data-tab="log">Game Log</button>
+      <button role="tab" data-tab="log">Player Stats</button>
       <button role="tab" data-tab="injuries">Injuries</button>
     </nav>
   </div>
@@ -124,12 +124,16 @@
       </label>
       <button class="ghost" id="lReset">Reset</button>
     </div>
-    <div id="propBox" class="prop" hidden>
+    <div id="propBox" class="prop">
       <span class="prop-t">Prop check</span>
       <select id="pStat"><option value="pts">Points</option><option value="reb">Rebounds</option><option value="ast">Assists</option><option value="fg3m">3PT made</option><option value="pra">Pts+Reb+Ast</option></select>
       <span>over</span>
       <input id="pLine" type="number" step="0.5" value="9.5" inputmode="decimal">
       <span id="pOut" class="prop-out"></span>
+      <span class="prop-view" id="pViewWrap">
+        <label class="mg-l">Min games <select id="pMin"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="8">8</option></select></label>
+        <span class="seg" id="pView"><button data-v="rank" class="on">Ranking</button><button data-v="log">All games</button></span>
+      </span>
     </div>
     <div id="logSummary" class="summary"></div>
     <div class="tablewrap"><table id="logTable" class="tbl"></table></div>

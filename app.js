@@ -7,7 +7,7 @@
 
   let D, T, L, F;   // data, teams, log rows (objects), log field index
   let INJ = null, INJP = {};   // injury report, injury entry by player id
-  const state = { round: null, team: '', mHome: '', mAway: '', sort: { k: 'round', dir: -1 } };
+  const state = { round: null, team: '', mHome: '', mAway: '', sort: { k: 'round', dir: -1 }, pView: 'rank', rSort: { k: 'pct', dir: -1 } };
 
   // ---------- helpers ----------
   const crest = (code, cls = 'crest') => T[code]?.crest ? `<img class="${cls}" src="${esc(T[code].crest)}" alt="" loading="lazy">` : '';
@@ -317,7 +317,9 @@
     $('#lLast').onchange = renderLog;
     $('#lPlayer').oninput = renderLog;
     $('#lReset').onclick = () => { $('#lTeam').value = ''; $('#lPos').value = ''; $('#lPlayer').value = ''; $('#lLast').value = '0'; fillPlayerList(); renderLog(); };
-    $('#pStat').onchange = renderLog; $('#pLine').oninput = renderLog;
+    $('#pStat').onchange = renderLog; $('#pLine').oninput = renderLog; $('#pMin').onchange = renderLog;
+    $('#pView').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.pView = b.dataset.v;
+      $('#pView').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderLog(); };
     renderLog();
   }
   function fillPlayerList() {
@@ -350,8 +352,9 @@
     // single player: summary + prop check
     const ids = new Set(rows.map(r => r.id));
     const single = ids.size === 1 && rows.length;
-    $('#propBox').hidden = !single;
-    let hitKey = null, line = null;
+    $('#pViewWrap').hidden = !!single;
+    let hitKey = $('#pStat').value, line = parseFloat($('#pLine').value);
+    if (!single && state.pView === 'rank') { $('#logSummary').innerHTML = ''; return renderRanking(rows, hitKey, line); }
     if (single) {
       const r0 = rows[0], n = rows.length, avg = f => (rows.reduce((s, r) => s + r[f], 0) / n).toFixed(1);
       const pct = (m, a) => { const A = rows.reduce((s, r) => s + (r[a] || 0), 0); return A ? (100 * rows.reduce((s, r) => s + (r[m] || 0), 0) / A).toFixed(1) + '%' : '–'; };
@@ -359,13 +362,16 @@
         [['GP', n], ['MIN', avg('min')], ['PTS', avg('pts')], ['REB', avg('reb')], ['AST', avg('ast')], ['3PM', avg('fg3m')],
          ['FG%', pct('fgm', 'fga')], ['FT%', pct('ftm', 'fta')]]
           .map(([l, v]) => `<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('');
-      hitKey = $('#pStat').value; line = parseFloat($('#pLine').value);
       const val = r => hitKey === 'pra' ? r.pts + r.reb + r.ast : r[hitKey];
       if (!isNaN(line)) {
         const hits = rows.filter(r => val(r) > line).length;
         $('#pOut').innerHTML = `Over in <b>${hits}/${n}</b> games (${Math.round(hits / n * 100)}%)`;
       } else $('#pOut').textContent = '';
-    } else $('#logSummary').innerHTML = '';
+    } else {
+      $('#logSummary').innerHTML = '';
+      const pv = r => hitKey === 'pra' ? r.pts + r.reb + r.ast : r[hitKey];
+      $('#pOut').innerHTML = isNaN(line) ? '' : `<b>${rows.filter(r => pv(r) > line).length}/${rows.length}</b> lines went over`;
+    }
 
     const shown = rows.slice(0, 600);
     const head = `<thead><tr>${COLS.map(([c, lab, cls]) => `<th class="${cls || ''} ${c === k ? 'sorted' : ''}" data-k="${c}">${lab}${c === k ? (dir < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('')}</tr></thead>`;
@@ -394,6 +400,47 @@
     });
     $('#logTable').querySelectorAll('.pn').forEach(n => n.onclick = () => openLogFor(n.dataset.id));
     $('#logCount').textContent = rows.length > shown.length ? `Showing ${shown.length} of ${rows.length} rows. Filter by team or player to narrow it down.` : `${rows.length} rows`;
+  }
+
+  const STATLAB = { pts: 'points', reb: 'rebounds', ast: 'assists', fg3m: '3PT made', pra: 'pts+reb+ast' };
+  function renderRanking(rows, hitKey, line) {
+    const minG = +$('#pMin').value;
+    const val = r => hitKey === 'pra' ? r.pts + r.reb + r.ast : r[hitKey];
+    const by = {};
+    rows.slice().sort((a, b) => a.round - b.round).forEach(r => (by[r.id] ||= []).push(r));
+    let list = Object.values(by).filter(g => g.length >= minG).map(g => {
+      const r0 = g[g.length - 1], n = g.length, hits = isNaN(line) ? 0 : g.filter(r => val(r) > line).length;
+      return { id: r0.id, name: r0.name, pos: r0.pos, team: r0.team, n, hits, pct: isNaN(line) ? 0 : hits / n * 100,
+        avg: g.reduce((s, r) => s + val(r), 0) / n, min: g.reduce((s, r) => s + r.min, 0) / n,
+        l5: g.slice(-5).map(r => !isNaN(line) && val(r) > line) };
+    });
+    const { k, dir } = state.rSort;
+    list.sort((a, b) => ((typeof a[k] === 'string' ? a[k].localeCompare(b[k]) : a[k] - b[k]) * dir) || (b.pct - a.pct) || (b.hits - a.hits) || (b.avg - a.avg));
+    const cls = p => p >= 70 ? 'good' : p <= 35 ? 'bad' : '';
+    const RC = [['rk', '#'], ['name', 'Player', 't'], ['pos', 'Pos'], ['team', 'Team', 't'], ['n', 'GP'], ['hits', 'Over'], ['pct', 'Hit %'], ['avg', 'Avg'], ['l5', 'Last 5', 't'], ['min', 'MIN']];
+    const head = `<thead><tr>${RC.map(([c, lab, cl]) => `<th class="${cl || ''} c-${c} ${c === k ? 'sorted' : ''}" data-k="${c}">${lab}${c === k ? (dir < 0 ? ' ↓' : ' ↑') : ''}</th>`).join('')}</tr></thead>`;
+    const body = list.slice(0, 400).map((p, i) => { const ij = INJP[p.id];
+      const pill = ij && ij.status !== 'Ready' ? ` <span class="st-pill st-${esc(ij.status)}" title="${esc(ij.reason || '')}">${esc(ij.status)}</span>` : '';
+      return `<tr><td class="rk c-rk">${i + 1}</td>
+        <td class="t c-name"><span class="mcrest">${crest(p.team)}</span><span class="pn" data-id="${esc(p.id)}">${esc(p.name)}</span>${pill}</td>
+        <td class="c-pos"><span class="pos ${p.pos}">${p.pos}</span></td>
+        <td class="t c-team">${crest(p.team)}<span class="tn">${esc(short(p.team))}</span></td>
+        <td class="c-n">${p.n}</td><td>${isNaN(line) ? '–' : p.hits + '/' + p.n}</td>
+        <td class="hr ${isNaN(line) ? '' : cls(p.pct)}">${isNaN(line) ? '–' : Math.round(p.pct) + '%'}</td>
+        <td>${p.avg.toFixed(1)}</td>
+        <td class="t c-l5"><span class="l5">${p.l5.map(h => `<i class="${h ? 'y' : ''}"></i>`).join('')}</span></td>
+        <td class="c-min">${p.min.toFixed(1)}</td></tr>`; }).join('');
+    $('#logTable').innerHTML = head + `<tbody>${body || `<tr><td colspan="${RC.length}" class="empty">No players match these filters.</td></tr>`}</tbody>`;
+    $('#logTable').querySelectorAll('th').forEach(th => th.onclick = () => {
+      const kk = th.dataset.k; if (kk === 'rk' || kk === 'l5') return;
+      state.rSort = { k: kk, dir: state.rSort.k === kk ? -state.rSort.dir : (['name', 'team', 'pos'].includes(kk) ? 1 : -1) };
+      renderLog();
+    });
+    $('#logTable').querySelectorAll('.pn').forEach(n => n.onclick = () => openLogFor(n.dataset.id));
+    const strong = isNaN(line) ? 0 : list.filter(p => p.pct >= 70).length;
+    $('#pOut').innerHTML = isNaN(line) ? '' : `<b>${strong}</b> of ${list.length} players over in 70%+ of games`;
+    $('#logCount').textContent = `Ranked by how often each player went over ${isNaN(line) ? '' : line + ' '}${STATLAB[hitKey]}` +
+      `${+$('#lLast').value ? ` in his last ${$('#lLast').value} games` : ''} · min ${minG} game${minG > 1 ? 's' : ''}. Tap a name for his game log.`;
   }
 
   // ---------- boot ----------
