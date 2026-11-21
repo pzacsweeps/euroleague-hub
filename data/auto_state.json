@@ -4,11 +4,15 @@
   "pregame": "2026-11-20"
  },
  "lastRun": {
-  "injuries": "2026-11-20T16:52:10Z"
+  "injuries": "2026-11-20T16:52:10Z",
+  "stats": "2026-11-21T08:26:23Z"
+ },
+ "stats": {
+  "round": 13
  },
  "today": {
-  "date": "2026-11-20",
-  "firstTip": "2026-11-20T17:30:00Z",
-  "games": 4
+  "date": "2026-11-21",
+  "firstTip": null,
+  "games": 0
  }
 }
