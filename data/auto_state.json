@@ -1,18 +1,18 @@
 {
  "injuries": {
-  "morning": "2026-11-24",
+  "morning": "2026-11-25",
   "pregame": "2026-11-20"
  },
  "lastRun": {
-  "injuries": "2026-11-24T08:41:26Z",
+  "injuries": "2026-11-25T08:46:55Z",
   "stats": "2026-11-21T08:26:23Z"
  },
  "stats": {
   "round": 13
  },
  "today": {
-  "date": "2026-11-24",
-  "firstTip": "2026-11-24T17:00:00Z",
-  "games": 6
+  "date": "2026-11-25",
+  "firstTip": "2026-11-25T16:00:00Z",
+  "games": 4
  }
 }
