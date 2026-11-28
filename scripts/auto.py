@@ -23,8 +23,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATE = os.path.join(ROOT, "data", "auto_state.json")
 HUB = os.path.join(ROOT, "data", "hub.json")
 
-PREGAME_FROM = timedelta(minutes=45)   # run when first tip-off is 45..10 min away
-PREGAME_UNTIL = timedelta(minutes=10)
+# GitHub runs scheduled checks late and sometimes only ~hourly, so the window is
+# wide: any check in the 100 min before the first tip-off pulls the report, and a
+# later check pulls it again if the last pull is 30+ min old (latest data wins).
+PREGAME_FROM = timedelta(minutes=100)
+PREGAME_UNTIL = timedelta(minutes=0)
+PREGAME_REFRESH = timedelta(minutes=30)
 
 
 def now():
@@ -118,6 +122,8 @@ def main():
         slot = sys.argv[sys.argv.index("--mark") + 1]
         if kind == "injuries" and slot in ("morning", "pregame"):
             st.setdefault("injuries", {})[slot] = t.date().isoformat()
+            if slot == "pregame":
+                st["injuries"]["pregameAt"] = t.strftime("%Y-%m-%dT%H:%M:%SZ")
         elif kind == "stats" and slot.startswith("round-") and slot[6:].isdigit():
             st.setdefault("stats", {})["round"] = int(slot.split("-", 1)[1])
         st.setdefault("lastRun", {})[kind] = t.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -142,12 +148,16 @@ def main():
         due, why = False, "no games today"
         if today.get("firstTip"):
             first = datetime.strptime(today["firstTip"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            if st.get("injuries", {}).get("pregame") == today["date"]:
-                why = "pre-game update already done today"
-            elif first - PREGAME_FROM <= t < first - PREGAME_UNTIL:
-                due, why = True, f"first tip-off {first:%H:%M} UTC"
-            else:
+            last = st.get("injuries", {}).get("pregameAt")
+            last = datetime.strptime(last, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc) if last else None
+            if t >= first:
+                why = f"first tip-off {first:%H:%M} UTC has passed"
+            elif t < first - PREGAME_FROM:
                 why = f"not yet (first tip-off {first:%H:%M} UTC)"
+            elif last and last.date() == t.date() and t - last < PREGAME_REFRESH:
+                why = f"pulled at {last:%H:%M} UTC, recent enough"
+            else:
+                due, why = True, f"first tip-off {first:%H:%M} UTC in {int((first - t).total_seconds() // 60)} min"
         print(why)
         emit_many(due=due)
         return
