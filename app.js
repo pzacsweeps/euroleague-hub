@@ -460,6 +460,7 @@
       initSchedule(); initMatchup(); initLog(); initInjuries();
     const h = location.hash.replace('#', '');
     if (['schedule', 'matchup', 'log', 'injuries'].includes(h)) showTab(h);
+      window.addEventListener('hashchange', () => { const t = location.hash.replace('#', '').split('?')[0]; if (['schedule', 'matchup', 'log', 'injuries'].includes(t)) showTab(t); });
     });
   }).catch(err => {
     $('#schedList').innerHTML = `<div class="empty">Couldn't load the data (${esc(err.message)}).</div>`;
